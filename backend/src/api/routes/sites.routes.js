@@ -7,6 +7,7 @@ const {
     updateSiteStatus
 } = require("../controllers/sites.controller");
 
+// Use express router
 const router = express.Router();
 
 // GET /api/sites - Get all sites

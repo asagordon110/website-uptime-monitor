@@ -2,6 +2,9 @@
 const express = require("express");
 const siteRoutes = require("./api/routes/sites.routes");
 
+// environment variables
+require("dotenv").config();
+
 // Create express app and assign port 
 const app = express();
 const PORT = 3000;
@@ -16,6 +19,18 @@ app.get("/health", (req, res) => {
 
 // use site routes for all /api/sites endpoints
 app.use("/api/sites", siteRoutes);
+
+// Test db connection
+async function testDatabaseConnection() {
+  try{
+    const result = await pool.query("SELECT 1");
+    console.log("Database connection successful");
+  } catch (error) {
+    console.error("Database connection failed", error.message);
+  }
+}
+
+testDatabaseConnection();
 
 // Start the server
 app.listen(PORT, () => {

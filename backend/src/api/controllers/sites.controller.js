@@ -1,6 +1,6 @@
 const pool = require("../../db/pool");
 
-
+// Function to display sites and status
 async function getSites(req, res) {
     try {
 
@@ -21,6 +21,7 @@ async function getSites(req, res) {
     }
 }
 
+// Function to create/add a site
 async function createSite(req, res){
     const { name, url } = req.body;
 
@@ -60,6 +61,7 @@ async function createSite(req, res){
     }
 }
 
+// Function to delete site
 async function deleteSite(req, res){
     const id = Number(req.params.id);
 
@@ -72,6 +74,7 @@ async function deleteSite(req, res){
             [id]
         );
         
+        // If site does not exist/not found, return not found error
         if (result.rows.length === 0) {
             return res.status(404).json({
                 error: "Site not found."

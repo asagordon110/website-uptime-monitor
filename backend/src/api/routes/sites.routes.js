@@ -3,8 +3,7 @@ const express = require("express");
 const {
     getSites,
     createSite,
-    deleteSite,
-    updateSiteStatus
+    deleteSite
 } = require("../controllers/sites.controller");
 
 // Use express router
@@ -19,8 +18,6 @@ router.post("/", createSite);
 // DELETE /api/sites/:id - Delete a site by ID
 router.delete("/:id", deleteSite);
 
-// POST /api/sites/:id/status - Update site status
-router.post("/:id/status", updateSiteStatus);
 
-// Export the router
+// Export the router 
 module.exports = router;

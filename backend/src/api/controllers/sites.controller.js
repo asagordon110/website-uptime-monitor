@@ -1,4 +1,4 @@
-const pool = require("../../db/pool");// 
+const pool = require("../../db/pool");
 
 
 async function getSites(req, res) {
@@ -92,35 +92,9 @@ async function deleteSite(req, res){
     }
 }
 
-function updateSiteStatus(req,res){
-    const id = Number(req.params.id);
-    const { status } = req.body;
-
-    if (!status || !["up", "down"].includes(status)) {
-        return res.status(400).json({
-            error: "status must be 'up' or 'down'"
-        });
-    }
-
-    const site = sites.find((site) => site.id === id);
-
-    if(!site){
-        return res.status(404).json({
-            error: "site not found"
-        });
-    }
-
-    site.status = status;
-
-    res.status(200).json({
-        message: "Status updated successfully",
-        site: site
-    });
-}
 
 module.exports = {
     getSites,
     createSite,
     deleteSite,
-    updateSiteStatus
 };

@@ -1,10 +1,24 @@
 const pool = require("../../db/pool");// 
 
 
-function getSites(req, res) {
+async function getSites(req, res) {
+    try {
+
+    // Query to show sites
+    const result = await pool.query(
+        `SELECT * FROM sites ORDER BY created_at DESC` // Select all from sites table in the order they were created_at starting with most recent
+    );
+
     res.status(200).json({
-        sites: sites
+        sites: result.rows
     });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to get sites."
+        });
+    }
 }
 
 async function createSite(req, res){
@@ -17,6 +31,7 @@ async function createSite(req, res){
         });
     }
 
+    // Query database to add name and url to sites table
     try {
         const result = await pool.query(
             `INSERT INTO sites (name, url)
@@ -32,28 +47,49 @@ async function createSite(req, res){
     } catch (error) {
         console.error(error);
 
+        // Handle duplicate sites
+        if (error.code === "23505") {   // 23505 = duplicate unique values error code in Postgres
+            return res.status(409).json({   // 409 = request conflicts w/ existing data
+                error: "Site already exists."
+            });
+        }
+
         res.status(500).json({
             error: "Failed to add site."
         });
     }
 }
 
-function deleteSite(req, res){
+async function deleteSite(req, res){
     const id = Number(req.params.id);
 
-    const siteExist = sites.find((site) => site.id === id);
+    // Query to delete site based on their id 
+    try {
+        const result = await pool.query(
+            `DELETE FROM sites
+            WHERE id = $1
+            RETURNING *`,
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Site not found."
+            });
+        }
 
-    if (!siteExist){
-        return res.status(404).json({
-            error: "Site not found"
-        });
-    }
-
-    sites = sites.filter((site) => site.id !== id);
-
-    res.status(200).json({
-        message: "Site deleted successfully"
+        res.status(200).json({
+        message: "Site deleted successfully",
+        site: result.rows[0]
     });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to delete site."
+        });
+
+    }
 }
 
 function updateSiteStatus(req,res){

@@ -1,6 +1,10 @@
 // Import express and site routes
 const express = require("express");
+const cors = require('cors');
 const siteRoutes = require("./api/routes/sites.routes");
+
+// db connection pool
+const pool = require("./db/pool");
 
 // environment variables
 require("dotenv").config();
@@ -26,7 +30,8 @@ async function testDatabaseConnection() {
     const result = await pool.query("SELECT 1");
     console.log("Database connection successful");
   } catch (error) {
-    console.error("Database connection failed", error.message);
+    console.error("Database connection failed:");
+    console.error(error);
   }
 }
 

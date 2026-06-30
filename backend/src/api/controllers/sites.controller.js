@@ -1,14 +1,13 @@
-// Temporary in-memory database
-let sites = [];
+const pool = require("../../db/pool");// 
 
-// 
+
 function getSites(req, res) {
     res.status(200).json({
         sites: sites
     });
 }
 
-function createSite(req, res){
+async function createSite(req, res){
     const { name, url } = req.body;
 
     // validate input
@@ -18,27 +17,25 @@ function createSite(req, res){
         });
     }
 
-    // check if site exists
-    const existingSite = sites.find((site) => site.url === url);
+    try {
+        const result = await pool.query(
+            `INSERT INTO sites (name, url)
+            VALUES ($1, $2)
+            RETURNING *`,
+            [name, url]
+        );
 
-    if (existingSite) {
-        return res.status(409).json({
-            error: "Site already exists"
+        res.status(201).json({
+            message: "Site added successfully",
+            site: result.rows[0]
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to add site."
         });
     }
-    const newSite = {
-        id: Date.now(),
-        name: name,
-        url: url,
-        status: "unknown"
-    };
-
-    sites.push(newSite);
-
-    res.status(201).json({
-        message: "Site added successfully",
-        site: newSite
-    });
 }
 
 function deleteSite(req, res){

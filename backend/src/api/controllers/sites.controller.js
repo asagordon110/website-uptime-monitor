@@ -157,12 +157,100 @@ async function checkSite(req, res) {
     }
 }
 
+// Function to get check history for a site
+async function getCheckHistory(req, res) {
+    const id = Number(req.params.id);
 
+    try {
+        const siteResult = await pool.query(
+            `SELECT * FROM sites WHERE id = $1`,
+            [id]
+        );
 
+        if (siteResult.rows.length === 0) {
+            return res.status(404).json({
+                error: "Site not found."
+            }); 
+        }
+
+        const checksResult = await pool.query(
+            `SELECT * FROM checks WHERE site_id = $1 
+            ORDER BY checked_at DESC`,
+            [id]
+        );
+        res.status(200).json({
+            message: "Check history retrieved successfully",
+            checks: checksResult.rows
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to get check history."
+        });
+    }
+}
+
+async function getSiteById(req, res) {
+    const id = Number(req.params.id);
+
+    try {
+        const result = await pool.query(
+            `SELECT * FROM sites WHERE id = $1`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Site not found."
+            });
+        }
+
+        res.status(200).json({
+            site: result.rows[0]
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to get site."
+        });
+    }
+}
+
+// function for dashboard endpoint to get all sites with their latest check status
+async function getDashboardStats(req, res) {
+    try {
+        const result = await pool.query(`
+            SELECT
+                COUNT(*) AS total_sites,
+                COUNT(*) FILTER (WHERE current_status = 'UP') AS sites_up,
+                COUNT(*) FILTER (WHERE current_status = 'DOWN') AS sites_down,
+                COUNT(*) FILTER (WHERE current_status = 'PENDING') AS sites_pending
+            FROM sites
+        `);
+        res.status(200).json({
+            totalSites: Number(result.rows[0].total_sites),
+            sitesUp: Number(result.rows[0].sites_up),
+            sitesDown: Number(result.rows[0].sites_down),
+            sitesPending: Number(result.rows[0].sites_pending),
+            totalChecks: Number(result.rows[0].total_checks)
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to get dashboard stats."
+        });
+    }
+}
 
 module.exports = {
     getSites,
     createSite,
     deleteSite,
     checkSite,
+    getCheckHistory,
+    getSiteById,
+    getDashboardStats
 };

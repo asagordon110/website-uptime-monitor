@@ -2,6 +2,8 @@
 const express = require("express");
 const cors = require('cors');
 const siteRoutes = require("./api/routes/sites.routes");
+const cron = require('node-cron');
+const { monitorAllSites } = require("./services/monitor.service");
 
 const { checkWebsite } = require("./services/uptime.service");
 
@@ -52,6 +54,12 @@ app.get("/test/uptime", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Failed to check website uptime" });
   }
+});
+
+cron.schedule("* * * * *", async() => {
+  console.log("Running scheduled uptime checks...");
+
+  await monitorAllSites();
 });
 
 // Start the server

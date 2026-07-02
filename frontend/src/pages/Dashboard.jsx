@@ -76,15 +76,19 @@ function Dashboard() {
 
   // Loads check history for one selected site.
   const handleViewHistory = async (id) => {
-    try {
-      const response = await api.get(`/sites/${id}/checks`);
-      setSelectedSite(response.data.site);
-      setCheckHistory(response.data.checks);
-    } catch (error) {
-      console.error(error);
-      setError("Failed to load check history.");
-    }
-  };
+  console.log("History clicked for site:", id);
+
+  try {
+    const response = await api.get(`/sites/${id}/checks`);
+    console.log("History response:", response.data);
+
+    setSelectedSite(response.data.site);
+    setCheckHistory(response.data.checks);
+  } catch (error) {
+    console.error(error);
+    setError("Failed to load check history.");
+  }
+};
 
   if (!stats) {
     return <div className="page">Loading dashboard...</div>;

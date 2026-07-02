@@ -180,6 +180,7 @@ async function getCheckHistory(req, res) {
         );
         res.status(200).json({
             message: "Check history retrieved successfully",
+            site: siteResult.rows[0],
             checks: checksResult.rows
         });
     } catch (error) {

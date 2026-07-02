@@ -9,8 +9,11 @@ dist/
 
 # Terraform
 .terraform/
+**/.terraform/
+node_modules/
+**/node_modules/
+.env
+*.tfvars
 *.tfstate
 *.tfstate.*
-terraform.tfvars
-crash.log
-.terraform.lock.hcl
+dist/

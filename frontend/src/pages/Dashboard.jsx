@@ -1,30 +1,58 @@
+// Main dashboard page: owns state, calls API helpers, and renders UI.
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import api from "../api/api";
+
 import StatCard from "../components/StatCard";
 import AddSiteForm from "../components/AddSiteForm";
 import SiteList from "../components/SiteList";
 
+import {
+  getDashboardStats,
+  getSites,
+  addSite,
+  deleteSite,
+  checkSite,
+  getCheckHistory,
+} from "../api/sites.api";
+
 function Dashboard() {
+  // Stores dashboard stat totals.
   const [stats, setStats] = useState(null);
+
+  // Stores all monitored websites.
   const [sites, setSites] = useState([]);
+
+  // Stores selected site's check history.
   const [checkHistory, setCheckHistory] = useState([]);
+
+  // Stores the site currently being viewed in history.
   const [selectedSite, setSelectedSite] = useState(null);
+
+  // Stores user-facing error messages.
   const [error, setError] = useState("");
+
+  // Tracks which site is currently being manually checked.
   const [checkingId, setCheckingId] = useState(null);
+
+  // Stores search input.
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Stores last dashboard refresh time.
   const [lastUpdated, setLastUpdated] = useState(null);
 
+  // Fetches dashboard stats from backend.
   const fetchStats = async () => {
-    const response = await api.get("/sites/dashboard/stats");
+    const response = await getDashboardStats();
     setStats(response.data);
   };
 
+  // Fetches all sites from backend.
   const fetchSites = async () => {
-    const response = await api.get("/sites");
+    const response = await getSites();
     setSites(response.data.sites);
   };
 
+  // Refreshes both stats and sites together.
   const refreshDashboard = async () => {
     try {
       setError("");
@@ -36,6 +64,7 @@ function Dashboard() {
     }
   };
 
+  // Loads dashboard data on page load and refreshes every 30 seconds.
   useEffect(() => {
     refreshDashboard();
 
@@ -46,6 +75,7 @@ function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Filters sites by name, URL, or status.
   const filteredSites = useMemo(() => {
     return sites.filter((site) => {
       const term = searchTerm.toLowerCase();
@@ -58,9 +88,10 @@ function Dashboard() {
     });
   }, [sites, searchTerm]);
 
+  // Adds a site and refreshes dashboard.
   const handleAddSite = async (siteData) => {
     try {
-      await api.post("/sites", siteData);
+      await addSite(siteData);
       toast.success("Site added successfully");
       await refreshDashboard();
     } catch (error) {
@@ -69,12 +100,13 @@ function Dashboard() {
     }
   };
 
+  // Deletes a site after confirmation.
   const handleDeleteSite = async (id) => {
     const confirmed = window.confirm("Are you sure you want to delete this site?");
     if (!confirmed) return;
 
     try {
-      await api.delete(`/sites/${id}`);
+      await deleteSite(id);
       toast.success("Site deleted");
       setSelectedSite(null);
       setCheckHistory([]);
@@ -85,10 +117,11 @@ function Dashboard() {
     }
   };
 
+  // Manually checks one site and refreshes dashboard.
   const handleCheckSite = async (id) => {
     try {
       setCheckingId(id);
-      await api.post(`/sites/${id}/check`);
+      await checkSite(id);
       toast.success("Check complete");
       await refreshDashboard();
     } catch (error) {
@@ -99,9 +132,10 @@ function Dashboard() {
     }
   };
 
+  // Loads check history for one selected site.
   const handleViewHistory = async (id) => {
     try {
-      const response = await api.get(`/sites/${id}/checks`);
+      const response = await getCheckHistory(id);
       setSelectedSite(response.data.site);
       setCheckHistory(response.data.checks);
       toast.success("History loaded");
@@ -111,6 +145,7 @@ function Dashboard() {
     }
   };
 
+  // Shows loading state while stats are unavailable.
   if (!stats) {
     return <div className="page">Loading dashboard...</div>;
   }

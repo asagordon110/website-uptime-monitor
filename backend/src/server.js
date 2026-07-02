@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require('cors');
 const siteRoutes = require("./api/routes/sites.routes");
 
+const { checkWebsite } = require("./services/uptime.service");
+
 // db connection pool
 const pool = require("./db/pool");
 
@@ -36,6 +38,22 @@ async function testDatabaseConnection() {
 }
 
 testDatabaseConnection();
+
+// Test uptime.server.js
+app.get("/test/uptime", async (req, res) => {
+  const url = req.query.url;
+  if (!url) {
+    return res.status(400).json({ error: "URL is required" });
+  }
+
+  try {
+    const result = await checkWebsite(url);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to check website uptime" });
+  }
+});
+
 
 // Start the server
 app.listen(PORT, () => {

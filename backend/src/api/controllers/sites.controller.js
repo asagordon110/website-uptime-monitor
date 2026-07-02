@@ -229,12 +229,17 @@ async function getDashboardStats(req, res) {
                 COUNT(*) FILTER (WHERE current_status = 'PENDING') AS sites_pending
             FROM sites
         `);
+
+        const totalChecks = await pool.query(`
+            SELECT COUNT(*) AS total_checks FROM checks
+        `);
+
         res.status(200).json({
             totalSites: Number(result.rows[0].total_sites),
             sitesUp: Number(result.rows[0].sites_up),
             sitesDown: Number(result.rows[0].sites_down),
             sitesPending: Number(result.rows[0].sites_pending),
-            totalChecks: Number(result.rows[0].total_checks)
+            totalChecks: Number(totalChecks.rows[0].total_checks)
         });
     } catch (error) {
         console.error(error);

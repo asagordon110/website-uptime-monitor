@@ -20,6 +20,8 @@ const PORT = 3000;
 // Middleware to parse JSON request bodies
 app.use(express.json());
 
+app.use(cors()); // Enable CORS for all routes
+
 // health check route
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });

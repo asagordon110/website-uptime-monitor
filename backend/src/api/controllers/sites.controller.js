@@ -1,4 +1,5 @@
 const pool = require("../../db/pool");
+const { checkWebsite } = require("../../services/uptime.service");
 
 // Function to display sites and status
 async function getSites(req, res) {
@@ -95,9 +96,73 @@ async function deleteSite(req, res){
     }
 }
 
+// Function to check site uptime
+async function checkSite(req, res) {
+    const id = Number(req.params.id);
+
+    try {
+        const result = await pool.query(
+            `SELECT * FROM sites WHERE id = $1`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Site not found."
+            });
+        }
+
+        const site = result.rows[0];
+
+        const uptimeResult = await checkWebsite(site.url);
+
+        const checkInsert = await pool.query(
+            `INSERT INTO checks (
+                site_id,
+                status,
+                status_code,
+                response_time_ms,
+                error_message
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *`,
+            [
+                site.id,
+                uptimeResult.status,
+                uptimeResult.statusCode,
+                uptimeResult.responseTimeMs,
+                uptimeResult.errorMessage
+            ]
+        );
+
+        const updatedSite = await pool.query(
+            `UPDATE sites
+             SET current_status = $1
+             WHERE id = $2
+             RETURNING *`,
+            [uptimeResult.status, site.id]
+        );
+
+        res.status(200).json({
+            message: "Site checked successfully",
+            site: updatedSite.rows[0],
+            check: checkInsert.rows[0]
+        });
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to check site."
+        });
+    }
+}
+
+
+
 
 module.exports = {
     getSites,
     createSite,
     deleteSite,
+    checkSite,
 };

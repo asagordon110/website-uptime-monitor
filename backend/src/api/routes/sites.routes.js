@@ -1,10 +1,12 @@
 const express = require("express");
 
+
 // Import functions from sites controller
 const {
     getSites,
     createSite,
-    deleteSite
+    deleteSite,
+    checkSite
 } = require("../controllers/sites.controller");
 
 // Use express router
@@ -18,6 +20,8 @@ router.post("/", createSite);
 
 // DELETE /api/sites/:id - Delete a site by ID
 router.delete("/:id", deleteSite);
+
+router.post("/:id/check", checkSite);
 
 // Export the router 
 module.exports = router;

@@ -1,64 +1,149 @@
-// This is the main entry point for the dashboard page
-import React, { useState, useEffect } from 'react';
-import api from '../api/api'; // Import the Axios instance for API requests
+// Main dashboard page: loads data, stores state, and handles API actions.
+import { useEffect, useState } from "react";
+import api from "../api/api";
+import StatCard from "../components/StatCard";
+import AddSiteForm from "../components/AddSiteForm";
+import SiteList from "../components/SiteList";
 
 function Dashboard() {
-    // STATE - a box where React remembers the numbers
-    // Starts as null because we have no data yet
-    const [stats, setStats] = useState(null);
-    const [sites, setSites] = useState([]); // State to hold the list of sites
+  const [stats, setStats] = useState(null);
+  const [sites, setSites] = useState([]);
+  const [checkHistory, setCheckHistory] = useState([]);
+  const [selectedSite, setSelectedSite] = useState(null);
+  const [error, setError] = useState("");
 
-    // EFFECT - runs once when the page first appears
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const response = await api.get("/sites/dashboard/stats"); // Make a GET request to the backend API
-                setStats(response.data); // Update the state with the response data
+  // Fetches dashboard stats from backend.
+  const fetchStats = async () => {
+    const response = await api.get("/sites/dashboard/stats");
+    setStats(response.data);
+  };
 
-            } catch (error) {
-                console.error("Error fetching dashboard stats:", error); // Log any errors
-            }
-        };
+  // Fetches all monitored sites from backend.
+  const fetchSites = async () => {
+    const response = await api.get("/sites");
+    setSites(response.data.sites);
+  };
 
-        const fetchSites = async () => {
-            try {
-                const sitesResponse = await api.get("/sites"); // Fetch the list of sites
-                setSites(sitesResponse.data.sites); // Update the state with the list of sites
-            } catch (error) {
-                console.error("Error fetching sites:", error); // Log any errors
-            }
-        };
-
-        fetchStats(); // Call the function to fetch stats
-        fetchSites(); // Call the function to fetch sites
-
-    }, []); // Empty dependency array means this effect runs once on mount
-
-    // While waiting for the api, send something friendly to the user
-    if (!stats) {
-        return <div>Loading dashboard stats...</div>; // Show a loading message while data is being fetched
+  // Refreshes all dashboard data.
+  const refreshDashboard = async () => {
+    try {
+      setError("");
+      await fetchStats();
+      await fetchSites();
+    } catch (error) {
+      console.error(error);
+      setError("Failed to load dashboard data.");
     }
+  };
 
-    // RENDER - disply the values from state
-    return (
-        <div>
-            <h1>Website Uptime Monitor</h1>
-            <p>Total Sites: {stats.totalSites}</p>
-            <p>Sites up: {stats.sitesUp}</p>
-            <p>Sites down: {stats.sitesDown}</p>
-            <p>Sites pending: {stats.sitesPending}</p>
-            <p>Total Checks: {stats.totalChecks}</p>
+  // Runs once when page loads.
+  useEffect(() => {
+    refreshDashboard();
+  }, []);
 
-        <h2>Monitored sites</h2>
-        {sites.map((site) => (
-            <div key={site.id}>
-                <h3>{site.name}</h3>
-                <p>{site.url}</p>
-                <p>Status: {site.current_status}</p>
+  // Adds a site, then refreshes dashboard data.
+  const handleAddSite = async (siteData) => {
+    try {
+      await api.post("/sites", siteData);
+      await refreshDashboard();
+    } catch (error) {
+      console.error(error);
+      setError("Failed to add site.");
+    }
+  };
+
+  // Deletes a site, then refreshes dashboard data.
+  const handleDeleteSite = async (id) => {
+    try {
+      await api.delete(`/sites/${id}`);
+      await refreshDashboard();
+    } catch (error) {
+      console.error(error);
+      setError("Failed to delete site.");
+    }
+  };
+
+  // Manually checks a site, then refreshes dashboard data.
+  const handleCheckSite = async (id) => {
+    try {
+      await api.post(`/sites/${id}/check`);
+      await refreshDashboard();
+    } catch (error) {
+      console.error(error);
+      setError("Failed to check site.");
+    }
+  };
+
+  // Loads check history for one selected site.
+  const handleViewHistory = async (id) => {
+    try {
+      const response = await api.get(`/sites/${id}/checks`);
+      setSelectedSite(response.data.site);
+      setCheckHistory(response.data.checks);
+    } catch (error) {
+      console.error(error);
+      setError("Failed to load check history.");
+    }
+  };
+
+  if (!stats) {
+    return <div className="page">Loading dashboard...</div>;
+  }
+
+  return (
+    <div className="page">
+      <header className="header">
+        <h1>Website Uptime Monitor</h1>
+        <p>Track website status, response time, and uptime history.</p>
+      </header>
+
+      {error && <p className="error">{error}</p>}
+
+      <section className="stats-grid">
+        <StatCard label="Total Sites" value={stats.totalSites} />
+        <StatCard label="Sites Up" value={stats.sitesUp} />
+        <StatCard label="Sites Down" value={stats.sitesDown} />
+        <StatCard label="Pending" value={stats.sitesPending} />
+        <StatCard label="Total Checks" value={stats.totalChecks} />
+      </section>
+
+      <section className="section">
+        <h2>Add Website</h2>
+        <AddSiteForm onAddSite={handleAddSite} />
+      </section>
+
+      <section className="section">
+        <h2>Monitored Sites</h2>
+        <SiteList
+          sites={sites}
+          onDeleteSite={handleDeleteSite}
+          onCheckSite={handleCheckSite}
+          onViewHistory={handleViewHistory}
+        />
+      </section>
+
+      {selectedSite && (
+        <section className="section">
+          <h2>Check History: {selectedSite.name}</h2>
+
+          {checkHistory.length === 0 ? (
+            <p>No checks yet.</p>
+          ) : (
+            <div className="history-list">
+              {checkHistory.map((check) => (
+                <div className="history-item" key={check.id}>
+                  <strong>{check.status}</strong>
+                  <span>Status Code: {check.status_code ?? "N/A"}</span>
+                  <span>Response: {check.response_time_ms}ms</span>
+                  <span>{new Date(check.checked_at).toLocaleString()}</span>
+                </div>
+              ))}
             </div>
-        ))}
-        </div>
-    );
+          )}
+        </section>
+      )}
+    </div>
+  );
 }
 
-export default Dashboard; // Export the Dashboard component for use in other parts of the app
+export default Dashboard;

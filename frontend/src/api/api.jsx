@@ -1,9 +1,8 @@
-/*frontend/src/api/api.jsx
-This file sets up an Axios instance for making API requests to the backend server. 
- You can customize the baseURL to point to your backend API endpoint.*/
+// Axios backend connection
 
 import axios from 'axios';
 
+// Create an Axios instance with the base URL of the backend API
 const api = axios.create({
   baseURL: 'http://localhost:3000/api', // Replace with your backend API URL
 });

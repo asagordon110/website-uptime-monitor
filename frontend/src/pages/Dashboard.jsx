@@ -1,5 +1,5 @@
-// Main dashboard page: loads data, stores state, and handles API actions.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import api from "../api/api";
 import StatCard from "../components/StatCard";
 import AddSiteForm from "../components/AddSiteForm";
@@ -11,84 +11,105 @@ function Dashboard() {
   const [checkHistory, setCheckHistory] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
   const [error, setError] = useState("");
+  const [checkingId, setCheckingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Fetches dashboard stats from backend.
   const fetchStats = async () => {
     const response = await api.get("/sites/dashboard/stats");
     setStats(response.data);
   };
 
-  // Fetches all monitored sites from backend.
   const fetchSites = async () => {
     const response = await api.get("/sites");
     setSites(response.data.sites);
   };
 
-  // Refreshes all dashboard data.
   const refreshDashboard = async () => {
     try {
       setError("");
-      await fetchStats();
-      await fetchSites();
+      await Promise.all([fetchStats(), fetchSites()]);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error(error);
       setError("Failed to load dashboard data.");
     }
   };
 
-  // Runs once when page loads.
   useEffect(() => {
     refreshDashboard();
+
+    const intervalId = setInterval(() => {
+      refreshDashboard();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
-  // Adds a site, then refreshes dashboard data.
+  const filteredSites = useMemo(() => {
+    return sites.filter((site) => {
+      const term = searchTerm.toLowerCase();
+
+      return (
+        site.name.toLowerCase().includes(term) ||
+        site.url.toLowerCase().includes(term) ||
+        site.current_status.toLowerCase().includes(term)
+      );
+    });
+  }, [sites, searchTerm]);
+
   const handleAddSite = async (siteData) => {
     try {
       await api.post("/sites", siteData);
+      toast.success("Site added successfully");
       await refreshDashboard();
     } catch (error) {
       console.error(error);
-      setError("Failed to add site.");
+      toast.error(error.response?.data?.error || "Failed to add site");
     }
   };
 
-  // Deletes a site, then refreshes dashboard data.
   const handleDeleteSite = async (id) => {
+    const confirmed = window.confirm("Are you sure you want to delete this site?");
+    if (!confirmed) return;
+
     try {
       await api.delete(`/sites/${id}`);
+      toast.success("Site deleted");
+      setSelectedSite(null);
+      setCheckHistory([]);
       await refreshDashboard();
     } catch (error) {
       console.error(error);
-      setError("Failed to delete site.");
+      toast.error("Failed to delete site");
     }
   };
 
-  // Manually checks a site, then refreshes dashboard data.
   const handleCheckSite = async (id) => {
     try {
+      setCheckingId(id);
       await api.post(`/sites/${id}/check`);
+      toast.success("Check complete");
       await refreshDashboard();
     } catch (error) {
       console.error(error);
-      setError("Failed to check site.");
+      toast.error("Failed to check site");
+    } finally {
+      setCheckingId(null);
     }
   };
 
-  // Loads check history for one selected site.
   const handleViewHistory = async (id) => {
-  console.log("History clicked for site:", id);
-
-  try {
-    const response = await api.get(`/sites/${id}/checks`);
-    console.log("History response:", response.data);
-
-    setSelectedSite(response.data.site);
-    setCheckHistory(response.data.checks);
-  } catch (error) {
-    console.error(error);
-    setError("Failed to load check history.");
-  }
-};
+    try {
+      const response = await api.get(`/sites/${id}/checks`);
+      setSelectedSite(response.data.site);
+      setCheckHistory(response.data.checks);
+      toast.success("History loaded");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load check history");
+    }
+  };
 
   if (!stats) {
     return <div className="page">Loading dashboard...</div>;
@@ -97,18 +118,28 @@ function Dashboard() {
   return (
     <div className="page">
       <header className="header">
-        <h1>Website Uptime Monitor</h1>
-        <p>Track website status, response time, and uptime history.</p>
+        <div>
+          <h1>Website Uptime Monitor</h1>
+          <p>Real-time monitoring for your websites.</p>
+        </div>
+
+        <div className="header-meta">
+          <span className="live-pill">● Live</span>
+          <span>
+            Last Updated:{" "}
+            {lastUpdated ? lastUpdated.toLocaleTimeString() : "Loading..."}
+          </span>
+        </div>
       </header>
 
       {error && <p className="error">{error}</p>}
 
       <section className="stats-grid">
-        <StatCard label="Total Sites" value={stats.totalSites} />
-        <StatCard label="Sites Up" value={stats.sitesUp} />
-        <StatCard label="Sites Down" value={stats.sitesDown} />
-        <StatCard label="Pending" value={stats.sitesPending} />
-        <StatCard label="Total Checks" value={stats.totalChecks} />
+        <StatCard label="🌐 Total Sites" value={stats.totalSites} type="neutral" />
+        <StatCard label="🟢 Sites Up" value={stats.sitesUp} type="success" />
+        <StatCard label="🔴 Sites Down" value={stats.sitesDown} type="danger-card" />
+        <StatCard label="🟡 Pending" value={stats.sitesPending} type="warning" />
+        <StatCard label="📊 Total Checks" value={stats.totalChecks} type="info" />
       </section>
 
       <section className="section">
@@ -117,9 +148,21 @@ function Dashboard() {
       </section>
 
       <section className="section">
-        <h2>Monitored Sites</h2>
+        <div className="section-header">
+          <h2>Monitored Sites</h2>
+
+          <input
+            className="search-input"
+            type="text"
+            placeholder="Search by name, URL, or status..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
         <SiteList
-          sites={sites}
+          sites={filteredSites}
+          checkingId={checkingId}
           onDeleteSite={handleDeleteSite}
           onCheckSite={handleCheckSite}
           onViewHistory={handleViewHistory}
@@ -131,17 +174,36 @@ function Dashboard() {
           <h2>Check History: {selectedSite.name}</h2>
 
           {checkHistory.length === 0 ? (
-            <p>No checks yet.</p>
+            <p className="muted">No checks yet.</p>
           ) : (
-            <div className="history-list">
-              {checkHistory.map((check) => (
-                <div className="history-item" key={check.id}>
-                  <strong>{check.status}</strong>
-                  <span>Status Code: {check.status_code ?? "N/A"}</span>
-                  <span>Response: {check.response_time_ms}ms</span>
-                  <span>{new Date(check.checked_at).toLocaleString()}</span>
-                </div>
-              ))}
+            <div className="table-wrapper">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Status Code</th>
+                    <th>Response Time</th>
+                    <th>Error</th>
+                    <th>Checked At</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {checkHistory.map((check) => (
+                    <tr key={check.id}>
+                      <td>
+                        <span className={`badge ${check.status === "UP" ? "up" : "down"}`}>
+                          {check.status}
+                        </span>
+                      </td>
+                      <td>{check.status_code ?? "N/A"}</td>
+                      <td>{check.response_time_ms}ms</td>
+                      <td>{check.error_message || "None"}</td>
+                      <td>{new Date(check.checked_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

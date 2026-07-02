@@ -1,9 +1,9 @@
-// Renders the list of monitored sites.
+// Renders all monitored site cards.
 import SiteCard from "./SiteCard";
 
-function SiteList({ sites, onDeleteSite, onCheckSite, onViewHistory }) {
+function SiteList({ sites, onDeleteSite, onCheckSite, onViewHistory, checkingId }) {
   if (sites.length === 0) {
-    return <p>No sites added yet.</p>;
+    return <p className="muted">No sites added yet.</p>;
   }
 
   return (
@@ -12,6 +12,7 @@ function SiteList({ sites, onDeleteSite, onCheckSite, onViewHistory }) {
         <SiteCard
           key={site.id}
           site={site}
+          checkingId={checkingId}
           onDeleteSite={onDeleteSite}
           onCheckSite={onCheckSite}
           onViewHistory={onViewHistory}

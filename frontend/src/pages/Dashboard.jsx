@@ -6,6 +6,7 @@ function Dashboard() {
     // STATE - a box where React remembers the numbers
     // Starts as null because we have no data yet
     const [stats, setStats] = useState(null);
+    const [sites, setSites] = useState([]); // State to hold the list of sites
 
     // EFFECT - runs once when the page first appears
     useEffect(() => {
@@ -13,13 +14,25 @@ function Dashboard() {
             try {
                 const response = await api.get("/sites/dashboard/stats"); // Make a GET request to the backend API
                 setStats(response.data); // Update the state with the response data
+
             } catch (error) {
                 console.error("Error fetching dashboard stats:", error); // Log any errors
             }
         };
 
+        const fetchSites = async () => {
+            try {
+                const sitesResponse = await api.get("/sites"); // Fetch the list of sites
+                setSites(sitesResponse.data.sites); // Update the state with the list of sites
+            } catch (error) {
+                console.error("Error fetching sites:", error); // Log any errors
+            }
+        };
+
         fetchStats(); // Call the function to fetch stats
-    }, []); // empty [] means this effect runs only once when the component mounts
+        fetchSites(); // Call the function to fetch sites
+
+    }, []); // Empty dependency array means this effect runs once on mount
 
     // While waiting for the api, send something friendly to the user
     if (!stats) {
@@ -35,6 +48,15 @@ function Dashboard() {
             <p>Sites down: {stats.sitesDown}</p>
             <p>Sites pending: {stats.sitesPending}</p>
             <p>Total Checks: {stats.totalChecks}</p>
+
+        <h2>Monitored sites</h2>
+        {sites.map((site) => (
+            <div key={site.id}>
+                <h3>{site.name}</h3>
+                <p>{site.url}</p>
+                <p>Status: {site.current_status}</p>
+            </div>
+        ))}
         </div>
     );
 }

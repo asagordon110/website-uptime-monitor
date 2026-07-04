@@ -137,9 +137,10 @@ async function checkSite(req, res) {
 
         const updatedSite = await pool.query(
             `UPDATE sites
-             SET current_status = $1
-             WHERE id = $2
-             RETURNING *`,
+            SET current_status = $1,
+                last_checked_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+            RETURNING *`,
             [uptimeResult.status, site.id]
         );
 

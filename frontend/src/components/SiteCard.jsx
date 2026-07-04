@@ -15,7 +15,8 @@ function SiteCard({ site, onDeleteSite, onCheckSite, onViewHistory, checkingId }
 
         <p className="site-url">{site.url}</p>
         <p className="muted">
-          Last Checked: {site.updated_at ? new Date(site.updated_at).toLocaleString() : "Not available"}
+          Last Checked:{" "} {site.last_checked_at ? new Date(site.last_checked_at).toLocaleString()
+  : "Not available"}
         </p>
       </div>
 

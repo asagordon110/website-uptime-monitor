@@ -32,7 +32,8 @@ async function monitorAllSites() {
 
                 await pool.query(
                     `UPDATE sites
-                    SET current_status = $1
+                    SET current_status = $1,
+                    last_checked_at = CURRENT_TIMESTAMP
                     WHERE id = $2`,
                     [uptimeResult.status, site.id]
                 );

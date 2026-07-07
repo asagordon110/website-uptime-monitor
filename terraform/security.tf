@@ -21,9 +21,9 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-alb-sg"
-  }
+  })
 }
 
 # Security group for ECS tasks.
@@ -56,9 +56,9 @@ resource "aws_security_group" "ecs_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-ecs-sg"
-  }
+  })
 }
 
 # Security group for rds postgresSQL
@@ -75,7 +75,7 @@ resource "aws_security_group" "rds_sg" {
     security_groups = [aws_security_group.ecs_sg.id]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-rds-sg"
-  }
+  })
 }

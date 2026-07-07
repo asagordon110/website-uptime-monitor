@@ -11,6 +11,7 @@ variable "project_name" {
   default     = "uptime-monitor"
 }
 
+# Networking Variables
 variable "vpc_cidr" {
   type    = string
   default = "10.0.0.0/16"
@@ -44,4 +45,17 @@ variable "az_1" {
 variable "az_2" {
   type    = string
   default = "us-east-1b"
+}
+
+# database variables
+variable "db_username" {
+  description = "RDS database username"
+  type        = string
+  default     = "postgres"
+}
+
+variable "db_password" {
+  description = "RDS database password"
+  type        = string
+  sensitive   = true
 }

@@ -6,9 +6,9 @@ resource "aws_vpc" "uptime_monitor_vpc" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-vpc"
-  }
+  })
 }
 
 resource "aws_subnet" "public_1" {
@@ -17,9 +17,9 @@ resource "aws_subnet" "public_1" {
   availability_zone       = var.az_1
   map_public_ip_on_launch = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-public-1"
-  }
+  })
 }
 
 resource "aws_subnet" "public_2" {
@@ -28,9 +28,9 @@ resource "aws_subnet" "public_2" {
   availability_zone       = var.az_2
   map_public_ip_on_launch = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-public-2"
-  }
+  })
 }
 
 resource "aws_subnet" "private_1" {
@@ -39,9 +39,9 @@ resource "aws_subnet" "private_1" {
   availability_zone       = var.az_1
   map_public_ip_on_launch = false
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-private-1"
-  }
+  })
 }
 
 resource "aws_subnet" "private_2" {
@@ -50,17 +50,17 @@ resource "aws_subnet" "private_2" {
   availability_zone       = var.az_2
   map_public_ip_on_launch = false
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-private-2"
-  }
+  })
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.uptime_monitor_vpc.id
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-igw"
-  }
+  })
 }
 
 resource "aws_route_table" "public_rt" {
@@ -71,17 +71,17 @@ resource "aws_route_table" "public_rt" {
     gateway_id = aws_internet_gateway.igw.id
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-public-rt"
-  }
+  })
 }
 
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.uptime_monitor_vpc.id
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.project_name}-private-rt"
-  }
+  })
 }
 
 resource "aws_route_table_association" "public_assoc_1" {

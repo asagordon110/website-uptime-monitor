@@ -55,6 +55,10 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "DB_SSL"
+          value = "true"
         }
       ]
 

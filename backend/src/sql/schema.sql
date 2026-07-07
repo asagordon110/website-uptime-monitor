@@ -1,16 +1,15 @@
--- Create sites table, id as primary key, current status default set to 'PENDING.'
 CREATE TABLE sites (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    url TEXT NOT NULL UNIQUE, -- Unique on url prevents duplicate websites
+    url TEXT NOT NULL UNIQUE,
     current_status TEXT NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_checked_at TIMESTAMP
 );
 
--- Create checks table
 CREATE TABLE checks (
     id SERIAL PRIMARY KEY,
-    site_id INTEGER REFERENCES sites(id) ON DELETE CASCADE, -- If a site is deleted, check history is deleted too.
+    site_id INTEGER REFERENCES sites(id) ON DELETE CASCADE,
     status TEXT NOT NULL,
     status_code INTEGER,
     response_time_ms INTEGER,

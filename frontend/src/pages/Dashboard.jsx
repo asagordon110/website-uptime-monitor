@@ -48,9 +48,9 @@ function Dashboard() {
 
   // Fetches all sites from backend.
   const fetchSites = async () => {
-    const response = await getSites();
-    setSites(response.data.sites);
-  };
+  const response = await getSites();
+  setSites(response.data.sites || []);
+};
 
   // Refreshes both stats and sites together.
   const refreshDashboard = async () => {

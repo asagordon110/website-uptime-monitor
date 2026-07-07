@@ -4,7 +4,7 @@ const cors = require('cors');
 const siteRoutes = require("./api/routes/sites.routes");
 const cron = require('node-cron');
 const { monitorAllSites } = require("./services/monitor.service");
-
+const initializeDatabase = require("./db/init");
 const { checkWebsite } = require("./services/uptime.service");
 
 // db connection pool
@@ -58,14 +58,21 @@ app.get("/test/uptime", async (req, res) => {
   }
 });
 
-cron.schedule("* * * * *", async() => {
+cron.schedule("*/5 * * * *", async() => {
   console.log("Running scheduled uptime checks...");
 
   await monitorAllSites();
 });
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+
+initializeDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to initialize database schema:", error);
+    process.exit(1);
+  });
 

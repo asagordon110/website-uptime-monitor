@@ -1,3 +1,5 @@
+// environment variables
+require("dotenv").config();
 // Import express and site routes
 const express = require("express");
 const cors = require('cors');
@@ -9,9 +11,6 @@ const { checkWebsite } = require("./services/uptime.service");
 
 // db connection pool
 const pool = require("./db/pool");
-
-// environment variables
-require("dotenv").config();
 
 // Create express app and assign port 
 const app = express();

@@ -1,9 +1,15 @@
-# Public Application Load Balancer.
+#############################################
+# Public Application Load Balancer
+#############################################
+
 resource "aws_lb" "app" {
   name               = "${var.project_name}-alb"
   load_balancer_type = "application"
   internal           = false
-  security_groups    = [aws_security_group.alb_sg.id]
+
+  security_groups = [
+    aws_security_group.alb_sg.id
+  ]
 
   subnets = [
     aws_subnet.public_1.id,
@@ -15,7 +21,10 @@ resource "aws_lb" "app" {
   })
 }
 
-# Target group for the frontend container.
+#############################################
+# Frontend target group
+#############################################
+
 resource "aws_lb_target_group" "frontend" {
   name        = "${var.project_name}-frontend-tg"
   port        = 80
@@ -24,8 +33,14 @@ resource "aws_lb_target_group" "frontend" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
-    matcher             = "200"
+    enabled = true
+
+    path     = "/"
+    protocol = "HTTP"
+    port     = "traffic-port"
+
+    matcher = "200"
+
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -37,7 +52,10 @@ resource "aws_lb_target_group" "frontend" {
   })
 }
 
-# Target group for the backend API container.
+#############################################
+# Backend target group
+#############################################
+
 resource "aws_lb_target_group" "backend" {
   name        = "${var.project_name}-backend-tg"
   port        = 3000
@@ -46,8 +64,14 @@ resource "aws_lb_target_group" "backend" {
   target_type = "ip"
 
   health_check {
-    path                = "/health"
-    matcher             = "200"
+    enabled = true
+
+    path     = "/health"
+    protocol = "HTTP"
+    port     = "traffic-port"
+
+    matcher = "200"
+
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -59,11 +83,17 @@ resource "aws_lb_target_group" "backend" {
   })
 }
 
-# Default listener sends normal browser traffic to the frontend.
+#############################################
+# HTTP listener
+#
+# Normal browser traffic goes to the frontend.
+#############################################
+
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
-  port              = 80
-  protocol          = "HTTP"
+
+  port     = 80
+  protocol = "HTTP"
 
   default_action {
     type             = "forward"
@@ -71,7 +101,13 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# Listener rule sends API traffic to the backend.
+#############################################
+# Backend listener rule
+#
+# API traffic and the public health endpoint
+# are forwarded to the Express backend.
+#############################################
+
 resource "aws_lb_listener_rule" "api" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 10
@@ -83,7 +119,10 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/api/*"]
+      values = [
+        "/api/*",
+        "/health"
+      ]
     }
   }
 }

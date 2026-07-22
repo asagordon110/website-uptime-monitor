@@ -1,4 +1,7 @@
-# ECS cluster that runs the frontend and backend services.
+#############################################
+# ECS cluster
+#############################################
+
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
 
@@ -7,15 +10,20 @@ resource "aws_ecs_cluster" "main" {
   })
 }
 
-# Backend task definition for the Express API container.
+#############################################
+# Backend task definition
+#############################################
+
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.project_name}-backend-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  cpu    = 256
+  memory = 512
+
+  execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn      = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -49,16 +57,29 @@ resource "aws_ecs_task_definition" "backend" {
           value = var.db_username
         },
         {
-          name  = "DB_PASSWORD"
-          value = var.db_password
-        },
-        {
           name  = "PORT"
           value = "3000"
         },
         {
           name  = "DB_SSL"
           value = "true"
+        },
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "BEDROCK_MODEL_ID"
+          value = var.bedrock_model_id
+        }
+      ]
+
+      # Inject only the password key from the
+      # RDS-managed Secrets Manager secret.
+      secrets = [
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = "${aws_db_instance.postgres.master_user_secret[0].secret_arn}:password::"
         }
       ]
 
@@ -74,20 +95,35 @@ resource "aws_ecs_task_definition" "backend" {
     }
   ])
 
+  # Ensure the required execution and application
+  # permissions exist before tasks use this definition.
+  depends_on = [
+    aws_iam_role_policy_attachment.ecs_execution_policy,
+    aws_iam_role_policy.ecs_execution_secrets_policy,
+    aws_iam_role_policy.ecs_task_bedrock_policy
+  ]
+
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-backend-task"
   })
 }
 
-# Frontend task definition for the React/Nginx container.
+#############################################
+# Frontend task definition
+#############################################
+
 resource "aws_ecs_task_definition" "frontend" {
   family                   = "${var.project_name}-frontend-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  cpu    = 256
+  memory = 512
+
+  execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+
+  # The frontend does not receive the backend task role.
+  # It does not need permission to invoke Bedrock.
 
   container_definitions = jsonencode([
     {
@@ -115,18 +151,27 @@ resource "aws_ecs_task_definition" "frontend" {
     }
   ])
 
+  depends_on = [
+    aws_iam_role_policy_attachment.ecs_execution_policy
+  ]
+
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-frontend-task"
   })
 }
 
-# Backend ECS service keeps the Express API task running.
+#############################################
+# Backend ECS service
+#############################################
+
 resource "aws_ecs_service" "backend" {
   name            = "${var.project_name}-backend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.backend.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
+
+  launch_type      = "FARGATE"
+  platform_version = "1.4.0"
+  desired_count    = 1
 
   network_configuration {
     subnets = [
@@ -145,7 +190,8 @@ resource "aws_ecs_service" "backend" {
   }
 
   depends_on = [
-    aws_lb_listener.http
+    aws_lb_listener.http,
+    aws_lb_listener_rule.api
   ]
 
   tags = merge(local.common_tags, {
@@ -153,13 +199,18 @@ resource "aws_ecs_service" "backend" {
   })
 }
 
-# Frontend ECS service keeps the React/Nginx task running.
+#############################################
+# Frontend ECS service
+#############################################
+
 resource "aws_ecs_service" "frontend" {
   name            = "${var.project_name}-frontend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.frontend.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
+
+  launch_type      = "FARGATE"
+  platform_version = "1.4.0"
+  desired_count    = 1
 
   network_configuration {
     subnets = [
